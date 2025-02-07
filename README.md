@@ -16,7 +16,7 @@
 </p>
 
 
-<p align="left"><sup>1</sup>Tsinghua University &ensp; <sup>2</sup>Tencent Hunyuna Research&ensp; <sup>3</sup>S-Lab, NTU&ensp; </p>
+<p align="left"><sup>1</sup>Tsinghua University &ensp; <sup>2</sup>Tencent Hunyuan Research&ensp; <sup>3</sup>S-Lab, NTU&ensp; </p>
 
 <p align="left"><sup>*</sup> Equal Contribution<sup>&ensp; &#x2709</sup>  Corresponding Author</p>
 
