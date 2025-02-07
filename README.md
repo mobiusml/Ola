@@ -28,7 +28,7 @@
 
 **Weights in Huggingface:** [![hf_checkpoint](https://img.shields.io/badge/🤗-Ola_7b-green)](https://huggingface.co/THUdyh/Ola-7b)
 
-**arXiv Paper:** [![arxiv](https://img.shields.io/badge/Arxiv-xxx-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/xxxx)
+**arXiv Paper:** [![arxiv](https://img.shields.io/badge/Arxiv-2502.04328-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2502.04328)
 
 **Demo by Gradio:** (Coming Soon) [![demo](https://img.shields.io/badge/Ola-Demo-yellow)](https://huggingface.co/spaces/THUdyh/xxxx) 
 
@@ -37,7 +37,7 @@
 
 ## 📢 News
 
-- 🎉[07/2/2025] The Ola is released! Check our [project page](https://ola-omni.github.io), [model weights](https://huggingface.co/THUdyh/Ola-7b), [arXiv paper](https://arxiv.org/abs/xxxx) for the strong omni-modal understanding model!
+- 🎉[07/2/2025] The Ola is released! Check our [project page](https://ola-omni.github.io), [model weights](https://huggingface.co/THUdyh/Ola-7b), [arXiv paper](https://arxiv.org/pdf/2502.04328) for the strong omni-modal understanding model!
 
 - 🔥[06/2/2025] [Ola-7b](https://huggingface.co/THUdyh/Ola-7b) achieves **Rank #1** on the OpenCompass Multi-modal Leaderboard among all the models under 30B parameters with average score of **72.6**. Check the impressive results [here](https://rank.opencompass.org.cn/leaderboard-multimodal/?m=REALTIME)!
 
@@ -160,11 +160,16 @@ Coming Soon, Stay tuned!
 
 If you find it useful for your research and applications, please cite our paper using this BibTeX:
 ```bibtex
-{}
+@article{liu2025ola,
+title={Ola: Pushing the Frontiers of Omni-Modal Language Model with Progressive Modality Alignment},
+author={Liu, Zuyan and Dong, Yuhao and Wang, Jiahui and Liu, Ziwei and Hu, Winston and Lu, Jiwen and Rao, Yongming},
+journal={arXiv preprint arXiv:2502.04328},
+year={2025}
+}
 ```
 
 ## Acknowledgement
 
 - Our codebase is conducted on [LLaVA](https://github.com/LLaVA-VL/LLaVA-NeXT)
 
-- Thanks to [VLMEvalKit](https://github.com/open-compass/VLMEvalKit) and [lmms-eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) team for the evaluation system!
+- Thanks [VLMEvalKit](https://github.com/open-compass/VLMEvalKit) and [lmms-eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) team for the evaluation system!
