@@ -110,16 +110,7 @@ pip install flash-attn --no-build-isolation
 
 1. Download `Ola-7b` from [Huggingface](https://huggingface.co/THUdyh/Ola-7b) or skip the step to using the online weights directly.
 
-2. Download audio encoder and put the weights under repo directory `path/to/Ola/pretrained`
-
-- Speech Encoder (`Whisper-large-v3`):
-
-```
-import whisper
-model = whisper.load_model("large-v3", download_root="models/speech_encoder/")
-```
-
-- Music Encoder ([Fine-tuned BEATs_iter3+ (AS2M) (cpt2)](https://1drv.ms/u/s!AqeByhGUtINrgcpj8ujXH1YUtxooEg?e=E9Ncea))
+2. Download audio encoder from [Huggingface](https://huggingface.co/THUdyh/Ola_speech_encoders/tree/main) and put the weights `large-v3.pt` and `BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt` under repo directory `path/to/Ola/pretrained`
 
 3. Run `inference/infer.py`
 
