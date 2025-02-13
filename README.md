@@ -20,7 +20,7 @@
 
 <p align="left"><sup>*</sup> Equal Contribution<sup>&ensp; &#x2709</sup>  Corresponding Author</p>
 
-[![Ola](https://img.shields.io/badge/Rank_1-OpenCampass(<30B)-blue)](https://rank.opencompass.org.cn/leaderboard-multimodal/?m=REALTIME)    [![Ola](https://img.shields.io/badge/Rank_8-VideoMME-red)](https://rank.opencompass.org.cn/leaderboard-multimodal/?m=REALTIME) 
+[![Ola](https://img.shields.io/badge/Rank_1-OpenCampass(<30B)-blue)](https://rank.opencompass.org.cn/leaderboard-multimodal/?m=REALTIME)    [![Ola](https://img.shields.io/badge/Rank_8-VideoMME-red)](https://video-mme.github.io/home_page.html#leaderboard) 
 
 ---
 
@@ -144,8 +144,11 @@ Coming Soon, Stay tuned!
 
 ## Training
 
-Coming Soon, Stay tuned!
+### Data Preparation
 
+Please refer to [DATA.md](https://github.com/Ola-Omni/Ola/blob/main/DATA.md) for instructions of customized finetuning or using the provided datasets. 
+
+### Start Training
 
 ## Citation
 
