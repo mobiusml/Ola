@@ -851,41 +851,6 @@ def create_siglip_vit(
         add_patch2x2=add_patch2x2
     )
 
-    if not SKIP_LOAD_VIT:
-        if path is not None and os.path.exists(path):
-            ckpt = path
-        else:
-            raise ValueError(f"Model checkpoint not found at {path}")
-        state_dict = torch.load(ckpt, map_location="cpu")
-        print('loading vision backbone from', path)
-
-        if 'genli' in path:
-            new_sd = {}
-            for k in state_dict.keys():
-                if k.startswith('base_model.model.model.vision_tower.vision_tower.'):
-                    new_k = k.replace('base_model.model.model.vision_tower.vision_tower.', '')
-                    new_sd[new_k] = state_dict[k]
-                
-                if add_patch2x2:
-                    if k.startswith('base_model.model.model.mm_projector.proj'):
-                        new_k = k.replace('base_model.model.model.mm_projector.proj', 'downsample')
-                        new_sd[new_k] = state_dict[k]
-
-        elif 'distill' in path:
-            new_sd = {}
-            state_dict = state_dict['model']
-            for k in state_dict.keys():
-                if k.startswith('vision_tower.'):
-                    new_k = k.replace('vision_tower.', '')
-                    new_sd[new_k] = state_dict[k]
-        else:
-            raise NotImplementedError
-        msg = model.load_state_dict(new_sd, strict=False)
-        print(msg)
-    
-    else:
-        print("#### Skip loading vision backbone")
-
     if gradient_checkpointing:
         model.set_grad_checkpointing(True)
     return model
@@ -897,26 +862,17 @@ if 'LOAD_VISION_EARLY' in os.environ:
 else:
     LOAD_VISION_EARLY = False
 
-
-if 'SKIP_LOAD_VIT' in os.environ:
-    print("SKIP_LOAD_VIT is set")
-    SKIP_LOAD_VIT = True
-else:
-    SKIP_LOAD_VIT = False
-
 if 'VIT_WITH_GRAD' in os.environ:
     print("VIT_WITH_GRAD is set")
     VIT_WITH_GRAD = True
 else:
     VIT_WITH_GRAD = False
 
-
 if 'FIX_SIZE' in os.environ:
     print("FIX_SIZE is set")
     FIX_SIZE = True
 else:
     FIX_SIZE = False
-
 
 if 'ANYRES_SPLIT' in os.environ:
     ANYRES_SPLIT = int(os.environ['ANYRES_SPLIT'])
@@ -968,7 +924,8 @@ class SigLIPViTAnysizeWrapper(nn.Module):
             print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
             return
         
-        self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
+        # self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
+        self.image_processor = CLIPImageProcessor.from_pretrained("/mnt/lzy/LLaVA/llava/model/multimodal_encoder/default_processor")
         if self.args.mm_projector_type == "conv_mlp" or self.args.mm_projector_type == "multipath_conv_mlp" or self.args.mm_projector_type == "multipath_conv_mlp_woconv":
             self.image_processor.crop_size['height'] = 384
             self.image_processor.crop_size['width'] = 384
