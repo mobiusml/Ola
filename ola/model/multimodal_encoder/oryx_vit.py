@@ -924,8 +924,7 @@ class SigLIPViTAnysizeWrapper(nn.Module):
             print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
             return
         
-        # self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
-        self.image_processor = CLIPImageProcessor.from_pretrained("/mnt/lzy/LLaVA/llava/model/multimodal_encoder/default_processor")
+        self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
         if self.args.mm_projector_type == "conv_mlp" or self.args.mm_projector_type == "multipath_conv_mlp" or self.args.mm_projector_type == "multipath_conv_mlp_woconv":
             self.image_processor.crop_size['height'] = 384
             self.image_processor.crop_size['width'] = 384
