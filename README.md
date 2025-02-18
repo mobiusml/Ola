@@ -32,10 +32,15 @@
 
 **Demo by Gradio:** (Coming Soon) [![demo](https://img.shields.io/badge/Ola-Demo-yellow)](https://huggingface.co/spaces/THUdyh/xxxx) 
 
-**Training Data:** (Coming Soon) [![data](https://img.shields.io/badge/Ola-Data-purple)](https://huggingface.co/datasets/THUdyh/xxxx) 
+**Training Data:** [![data](https://img.shields.io/badge/Ola-Data-purple)](https://huggingface.co/datasets/THUdyh/Ola-Data) 
 
+**中文解读**: [![chinese](https://img.shields.io/badge/Ola-机器之心-cyan)](https://mp.weixin.qq.com/s/N4bjcHOejJudtxTFZVAXmg) 
+
+Contact: Leave issue or contact liuzuyan19@gmail.com . We are on call to respond.
 
 ## 📢 News
+
+- 🔥[18/2/2025] The training data, training script for Ola-7b is released!
 
 - 🎉[07/2/2025] The Ola is released! Check our [project page](https://ola-omni.github.io), [model weights](https://huggingface.co/THUdyh/Ola-7b), [arXiv paper](https://arxiv.org/pdf/2502.04328) for the strong omni-modal understanding model!
 
@@ -45,7 +50,7 @@
 
 - [ ] Evaluation code on omni-modal benchmarks
 - [ ] Gradio Demo
-- [ ] Training Data (Video, Audio, Cross-Modality)
+- [x] Training Data (Video, Audio, Cross-Modality)
 
 ## 🌟 Introduction
 
@@ -149,6 +154,12 @@ Coming Soon, Stay tuned!
 Please refer to [DATA.md](https://github.com/Ola-Omni/Ola/blob/main/DATA.md) for instructions of customized finetuning or using the provided datasets. 
 
 ### Start Training
+
+Please follow the script below to start training. Make sure you have created the correct datasets for fine-tuning. 
+
+```
+bash ./scripts/train_ola.sh
+```
 
 ## Citation
 

@@ -93,17 +93,17 @@ The format for video patch is:
 
 #### **Ola-Video-1.9M**
 
-1. Download [Ola-video-1.9M.json]() from huggingface. 
+1. Download [Ola-video-1.9M.json](https://huggingface.co/datasets/THUdyh/Ola-Data/blob/main/video_data/video-data.json) from huggingface. 
 
-2. Download all the [video patches]() from huggingface. 
+2. Download all the [video patches](https://huggingface.co/datasets/THUdyh/Ola-Data/tree/main/video_data) from huggingface. 
 
 3. Check and modify the video patch path in the json to the true path in your machine.
 
 #### **Ola-Audio-1.1M**
 
-1. Download [Ola_audio_1169k.json]() from huggingface. 
+1. Download [Ola_audio_1169k.json](https://huggingface.co/datasets/THUdyh/Ola-Data/blob/main/Ola_audio_1169k.json) from huggingface. 
 
-2. Download [wav tar file]() from huggingface and unzip all the files. 
+2. Download [wav tar file](https://huggingface.co/datasets/THUdyh/Ola-Data/tree/main/ola_audio) from huggingface and unzip all the files. 
 
 3. Check the file structure:
 
@@ -123,7 +123,7 @@ The format for video patch is:
 
 #### **Ola-Cross-Modality-298k**
 
-1. Download [Ola_cross_modality_finevideo_175k.json]() and [Ola_cross_modality_llava_123k.json]()  from huggingface. 
+1. Download [Ola_cross_modality_finevideo_175k.json](https://huggingface.co/datasets/THUdyh/Ola-Data/blob/main/Ola_cross_modality_finevideo_175k.json) and [Ola_cross_modality_llava_123k.json](https://huggingface.co/datasets/THUdyh/Ola-Data/blob/main/Ola_cross_modality_llava_123k.json)  from huggingface. 
 
 2. Download [FineVideo](https://huggingface.co/datasets/HuggingFaceFV/finevideo/tree/main) from huggingface.
 
