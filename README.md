@@ -20,7 +20,7 @@
 
 <p align="left"><sup>*</sup> Equal Contribution<sup>&ensp; &#x2709</sup>  Corresponding Author</p>
 
-[![Ola](https://img.shields.io/badge/Rank_1-OpenCampass(<30B)-blue)](https://rank.opencompass.org.cn/leaderboard-multimodal/?m=REALTIME)    [![Ola](https://img.shields.io/badge/Rank_8-VideoMME-red)](https://video-mme.github.io/home_page.html#leaderboard) 
+[![Ola](https://img.shields.io/badge/Rank_1-OpenCampass(<15B)-blue)](https://rank.opencompass.org.cn/leaderboard-multimodal/?m=REALTIME)    [![Ola](https://img.shields.io/badge/Rank_8-VideoMME-red)](https://video-mme.github.io/home_page.html#leaderboard) 
 
 ---
 
