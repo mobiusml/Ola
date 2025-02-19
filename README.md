@@ -30,7 +30,7 @@
 
 **arXiv Paper:** [![arxiv](https://img.shields.io/badge/Arxiv-2502.04328-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2502.04328)
 
-**Demo by Gradio:** (Coming Soon) [![demo](https://img.shields.io/badge/Ola-Demo-yellow)](https://huggingface.co/spaces/THUdyh/xxxx) 
+**Demo by Gradio:** [![demo](https://img.shields.io/badge/Ola-Demo-yellow)](https://huggingface.co/spaces/THUdyh/Ola) 
 
 **Training Data:** [![data](https://img.shields.io/badge/Ola-Data-purple)](https://huggingface.co/datasets/THUdyh/Ola-Data) 
 
