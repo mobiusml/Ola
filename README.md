@@ -40,6 +40,8 @@ Contact: Leave issue or contact liuzuyan19@gmail.com . We are on call to respond
 
 ## 📢 News
 
+- 🚀[19/2/2025] We release the huggingface demo of Ola, try the advanced omni-modal model on your own!
+
 - 🔥[18/2/2025] The training data, training script for Ola-7b is released!
 
 - 🎉[07/2/2025] The Ola is released! Check our [project page](https://ola-omni.github.io), [model weights](https://huggingface.co/THUdyh/Ola-7b), [arXiv paper](https://arxiv.org/pdf/2502.04328) for the strong omni-modal understanding model!
@@ -49,7 +51,7 @@ Contact: Leave issue or contact liuzuyan19@gmail.com . We are on call to respond
 ## 🚀Coming Soon
 
 - [ ] Evaluation code on omni-modal benchmarks
-- [ ] Gradio Demo
+- [x] Gradio Demo
 - [x] Training Data (Video, Audio, Cross-Modality)
 
 ## 🌟 Introduction
