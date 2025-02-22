@@ -2,7 +2,7 @@
 
 ### Data Format
 
-We follow the data format below, which is similar to LLaVA. You can directly use the original file path or pack the multi-modal files into patches following [create_patch.py](). Patch is a binary file containing continuous image or video files in byte format, which may accelerate reading speed in some cases.
+We follow the data format below, which is similar to LLaVA. You can directly use the original file path or pack the multi-modal files into patches following [create_patch.py](https://github.com/Ola-Omni/Ola/blob/main/tools/create_patch.py). Patch is a binary file containing continuous image or video files in byte format, which may accelerate reading speed in some cases.
 
 
 - Image Data:

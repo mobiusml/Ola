@@ -9,7 +9,6 @@ os.environ['MAXRES'] = '1536'
 os.environ['MINRES'] = '0'
 os.environ['FORCE_NO_DOWNSAMPLE'] = '1'
 os.environ['LOAD_VISION_EARLY'] = '1'
-os.environ['SKIP_LOAD_VIT'] = '1'
 os.environ['PAD2STRIDE'] = '1'
 
 import gradio as gr
@@ -98,10 +97,14 @@ if video_path is not None:
     visual = video_path
     assert image_path is None
 
-if image_path is not None:
+elif image_path is not None:
     visual = image_path
     modality = "image"
     assert video_path is None
+
+elif audio_path is not None:
+    modality = "text"
+
 
 # input audio and video, do not parse audio in the video, else parse audio in the video
 if audio_path:
@@ -123,9 +126,14 @@ if modality == "video":
     frame_idx = uniform_sampled_frames.tolist()
     spare_frames = vr.get_batch(frame_idx).asnumpy()
     video = [Image.fromarray(frame) for frame in spare_frames]
-else:
+elif modality == "image":
     image = [Image.open(visual)]
     image_sizes = [image[0].size]
+else:
+    images = [torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device='cuda', non_blocking=True)]
+    images_highres = [torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device='cuda', non_blocking=True)]
+    image_sizes = [(224, 224)]
+
 
 if USE_SPEECH and audio_path:
     audio_path = audio_path
@@ -162,8 +170,10 @@ elif USE_SPEECH and video_path: # video + audio
     qs = DEFAULT_SPEECH_TOKEN + DEFAULT_IMAGE_TOKEN + "\n" + qs
 elif USE_SPEECH and audio_path: # audio + text
     qs = DEFAULT_SPEECH_TOKEN + "\n" + qs
-else: # image / video
+elif image_path or video_path: # image / video
     qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
+elif text: # text
+    qs = qs
 
 conv = conv_templates[conv_mode].copy()
 conv.append_message(conv.roles[0], qs)
@@ -195,7 +205,7 @@ if modality == "video":
     video_processed = (video_processed, video_processed)
 
     video_data = (video_processed, (384, 384), "video")
-else:
+elif modality == "image":
     image_processor.do_resize = False
     image_processor.do_center_crop = False
     image_tensor, image_highres_tensor = [], []
@@ -254,7 +264,7 @@ with torch.inference_mode():
             num_beams=gen_kwargs["num_beams"],
             max_new_tokens=gen_kwargs["max_new_tokens"],
         )
-    else:
+    elif modality == "image":
         output_ids = model.generate(
             inputs=input_ids,
             images=image_tensor,
@@ -274,6 +284,26 @@ with torch.inference_mode():
             num_beams=gen_kwargs["num_beams"],
             max_new_tokens=gen_kwargs["max_new_tokens"],
         )
+    elif modality == "text":
+        output_ids = model.generate(
+            input_ids,
+            images=images,
+            images_highres=images_highres,
+            image_sizes=image_sizes,
+            modalities=['text'],
+            speech=speechs,
+            speech_lengths=speech_lengths,
+            speech_chunks=speech_chunks,
+            speech_wav=speech_wavs,
+            attention_mask=attention_masks,
+            use_cache=True,
+            stopping_criteria=[stopping_criteria],
+            do_sample=True if gen_kwargs["temperature"] > 0 else False,
+            temperature=gen_kwargs["temperature"],
+            top_p=gen_kwargs["top_p"],
+            num_beams=gen_kwargs["num_beams"],
+            max_new_tokens=gen_kwargs["max_new_tokens"],
+            )
 
 outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0]
 outputs = outputs.strip()
