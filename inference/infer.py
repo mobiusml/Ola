@@ -310,3 +310,5 @@ outputs = outputs.strip()
 if outputs.endswith(stop_str):
     outputs = outputs[:-len(stop_str)]
 outputs = outputs.strip()
+
+print(outputs)
