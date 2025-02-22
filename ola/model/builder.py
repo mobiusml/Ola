@@ -26,15 +26,15 @@ def load_pretrained_model(model_path, model_base, is_lora=False, s2s=False, load
 
     model_cls = OlaQwenForCausalLM
 
-    # Load OmniSpeech model
+    # Load Ola model
     if is_lora:
         assert model_base is not None, "model_base is required for LoRA models."
         from ola.model.language_model.ola_qwen import OlaConfigQwen
         lora_cfg_pretrained = OlaConfigQwen.from_pretrained(model_path)
         tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
-        print('Loading OmniSpeech from base model...')
+        print('Loading Ola from base model...')
         model = model_cls.from_pretrained(model_base, low_cpu_mem_usage=False, config=lora_cfg_pretrained, **kwargs)
-        print('Loading additional OmniSpeech weights...')
+        print('Loading additional Ola weights...')
         if os.path.exists(os.path.join(model_path, 'non_lora_trainables.bin')):
             non_lora_trainables = torch.load(os.path.join(model_path, 'non_lora_trainables.bin'), map_location='cpu')
         non_lora_trainables = {(k[11:] if k.startswith('base_model.') else k): v for k, v in non_lora_trainables.items()}
@@ -49,7 +49,7 @@ def load_pretrained_model(model_path, model_base, is_lora=False, s2s=False, load
         model = model.merge_and_unload()
         print('Model is loaded...')
     elif model_base is not None:
-        print('Loading OmniSpeech from base model...')
+        print('Loading Ola from base model...')
         tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
         cfg_pretrained = AutoConfig.from_pretrained(model_path)
         model = model_cls.from_pretrained(model_base, low_cpu_mem_usage=False, config=cfg_pretrained, **kwargs)
