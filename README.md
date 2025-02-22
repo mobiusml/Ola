@@ -36,7 +36,7 @@
 
 **中文解读**: [![chinese](https://img.shields.io/badge/Ola-机器之心-cyan)](https://mp.weixin.qq.com/s/N4bjcHOejJudtxTFZVAXmg) 
 
-Contact: Leave issue or contact liuzuyan19@gmail.com . We are on call to respond.
+Contact: Leave an issue or contact liuzuyan19@gmail.com . We are on call to respond.
 
 ## 📢 News
 
@@ -56,7 +56,7 @@ Contact: Leave issue or contact liuzuyan19@gmail.com . We are on call to respond
 
 ## 🌟 Introduction
 
-**Ola** is an Omni-modal language model that achieves competitive performance across image, video, and audio understanding compared to specialized counterparts. Ola pushes the frontiers of the omni-modal language mode with the design of progressive modality alignment strategy, omni-modal architecture, and the well-designed cross-modality training data. 
+**Ola** is an Omni-modal language model that achieves competitive performance across image, video, and audio understanding compared to specialized counterparts. Ola pushes the frontiers of the omni-modal language model with the design of progressive modality alignment strategy, omni-modal architecture, and the well-designed cross-modality training data. 
 
 <p align="center" width="100%">
 <img src="https://ola-omni.github.io/static/images/teaser.png" alt="teaser.png" width=100%>
@@ -88,7 +88,7 @@ We visualize the relationships among modalities in the left part. Speech acts as
 </p>
 <div>
 
-Ola Achieves competitive performance across major multi-modal benchmarks when compared to state-of-the-art specialist-modal LLMs.
+Ola achieves competitive performance across major multi-modal benchmarks when compared to state-of-the-art specialist-modal LLMs.
 
 ## Installation
 
