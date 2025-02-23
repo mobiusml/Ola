@@ -24,13 +24,13 @@ import librosa
 import whisper
 from ola.conversation import conv_templates, SeparatorStyle
 from ola.model.builder import load_pretrained_model
-from ola.datasets.preprocess import tokenizer_image_token, tokenizer_speech_image_token, tokenizer_speech_question_image_token
+from ola.datasets.preprocess import tokenizer_image_token, tokenizer_speech_image_token, tokenizer_speech_question_image_token, tokenizer_speech_token
 from ola.mm_utils import KeywordsStoppingCriteria, process_anyres_video, process_anyres_highres_image
 from ola.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX, DEFAULT_SPEECH_TOKEN
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_path', type=str, default='THUdyh/Ola-7b')
+parser.add_argument('--model_path', type=str, default='/apdcephfs_jn/share_302244400/peterrao/models/Ola-7b')
 parser.add_argument('--text', type=str, default=None)
 parser.add_argument('--audio_path', type=str, default=None)
 parser.add_argument('--image_path', type=str, default=None)
@@ -44,7 +44,6 @@ model = model.bfloat16()
 
 USE_SPEECH=False
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-
 
 def load_audio(audio_file_name):
     speech_wav, samplerate = librosa.load(audio_file_name, sr=16000)
@@ -164,6 +163,7 @@ if text:
     qs = text
 else:
     qs = ''
+
 if USE_SPEECH and audio_path and image_path: # image + speech instruction
     qs = DEFAULT_IMAGE_TOKEN + "\n" + "User's question in speech: " + DEFAULT_SPEECH_TOKEN + '\n'
 elif USE_SPEECH and video_path: # video + audio
@@ -179,10 +179,12 @@ conv = conv_templates[conv_mode].copy()
 conv.append_message(conv.roles[0], qs)
 conv.append_message(conv.roles[1], None)
 prompt = conv.get_prompt()
-if USE_SPEECH and audio_path and image_path:
+if USE_SPEECH and audio_path and image_path: # image + speech instruction
     input_ids = tokenizer_speech_question_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
-elif USE_SPEECH:
+elif USE_SPEECH and video_path: # video + audio
     input_ids = tokenizer_speech_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
+elif USE_SPEECH and audio_path: # audio + text
+    input_ids = tokenizer_speech_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
 else:
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
 
