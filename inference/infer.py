@@ -30,7 +30,7 @@ from ola.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX, 
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_path', type=str, default='/apdcephfs_jn/share_302244400/peterrao/models/Ola-7b')
+parser.add_argument('--model_path', type=str, default='THUdyh/Ola-7b')
 parser.add_argument('--text', type=str, default=None)
 parser.add_argument('--audio_path', type=str, default=None)
 parser.add_argument('--image_path', type=str, default=None)
