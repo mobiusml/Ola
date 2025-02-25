@@ -26,7 +26,7 @@ from ola.conversation import conv_templates, SeparatorStyle
 from ola.model.builder import load_pretrained_model
 from ola.datasets.preprocess import tokenizer_image_token, tokenizer_speech_image_token, tokenizer_speech_question_image_token, tokenizer_speech_token
 from ola.mm_utils import KeywordsStoppingCriteria, process_anyres_video, process_anyres_highres_image
-from ola.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX, DEFAULT_SPEECH_TOKEN
+from ola.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX, DEFAULT_SPEECH_TOKEN, SPEECH_TOKEN_INDEX
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -184,7 +184,7 @@ if USE_SPEECH and audio_path and image_path: # image + speech instruction
 elif USE_SPEECH and video_path: # video + audio
     input_ids = tokenizer_speech_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
 elif USE_SPEECH and audio_path: # audio + text
-    input_ids = tokenizer_speech_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
+    input_ids = tokenizer_speech_token(prompt, tokenizer, SPEECH_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
 else:
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
 
