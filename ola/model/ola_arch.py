@@ -45,6 +45,7 @@ class OlaMetaModel:
         self.config.speech_projector_type = getattr(model_args, 'speech_projector_type', 'linear')
         self.config.speech_encoder_ds_rate = getattr(model_args, 'speech_encoder_ds_rate', 5)
         self.config.speech_encoder_hidden_size = getattr(model_args, 'speech_encoder_hidden_size', 1280)
+        self.config.music_encoder = getattr(model_args, 'music_encoder', None)
 
         if self.get_speech_encoder() is None:
             speech_encoder = build_speech_encoder(self.config)
@@ -254,7 +255,6 @@ class OlaMetaForCausalLM(ABC):
                 cur_speech_idx += 1
                 cur_image_idx += 1
                 continue
-
             speech_image_token_indices = [-1] + torch.where((cur_input_ids == SPEECH_TOKEN_INDEX) | (cur_input_ids == IMAGE_TOKEN_INDEX))[0].tolist() + [cur_input_ids.shape[0]]
 
             cur_input_ids_nospeech_image = []

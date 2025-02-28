@@ -59,7 +59,6 @@ class ModelArguments:
     speech_audio: bool = field(default=False)
     freeze_backbone: bool = field(default=False)
     tune_speech_adapter: bool = field(default=False)
-    tune_speech_generator_only: bool = field(default=False)
     tune_mm_mlp_adapter: bool = field(default=False)
     tune_mm_vision_resampler: bool = field(default=False)
     speech_encoder: Optional[str] = field(default=None)
@@ -70,8 +69,8 @@ class ModelArguments:
     mm_vision_select_layer: Optional[int] = field(default=-1)   # default to the last layer
     pretrain_mm_mlp_adapter: Optional[str] = field(default=None)
     pretrain_speech_projector: Optional[str] = field(default=None)
-    speech_projector_type: Optional[str] = field(default='linear')
-    speech_encoder_type: Optional[str] = field(default='dual')
+    speech_projector_type: Optional[str] = field(default='none')
+    speech_encoder_type: Optional[str] = field(default='none')
     speech_encoder_config: Optional[str] = field(default='')
     speech_encoder_ds_rate: Optional[int] = field(default=10)
     speech_encoder_hidden_size: Optional[int] = field(default=1280)
@@ -317,8 +316,9 @@ def preprocess_multimodal(
                 sentence['value'] = DEFAULT_SPEECH_TOKEN + '\n' + sentence['value']
                 sentence['value'] = sentence['value'].strip()
             elif DEFAULT_IMAGE_TOKEN in sentence['value']:
+                num_image = sentence['value'].count(DEFAULT_IMAGE_TOKEN)
                 sentence['value'] = sentence['value'].replace(DEFAULT_IMAGE_TOKEN, '').strip()
-                sentence['value'] = DEFAULT_IMAGE_TOKEN + '\n' + sentence['value']
+                sentence['value'] = ( DEFAULT_IMAGE_TOKEN + '\n' ) * num_image + sentence['value']
                 sentence['value'] = sentence['value'].strip()
     return sources
 
@@ -568,15 +568,18 @@ def preprocess_qwen(sources, tokenizer: transformers.PreTrainedTokenizer, has_sp
                         else:
                             _input_id = _input_id + tokenizer(cur_value).input_ids + [SPEECH_TOKEN_INDEX] + nl_tokens
             elif has_image and "<image>" in sentence["value"]:
-                if sentence["value"].startswith("<image>"):
-                    _input_id = tokenizer(role).input_ids + nl_tokens + [IMAGE_TOKEN_INDEX] + nl_tokens + tokenizer(sentence["value"][len("<image>") :]).input_ids + [im_end] + nl_tokens
-                else:
-                    _input_id = []
-                    split_value = sentence["value"].split('<image>\n')
-                    _input_id += tokenizer(role).input_ids + nl_tokens
-                    for idx, cur_value in enumerate(split_value):
-                        if idx == len(split_value) - 1:
+                _input_id = []
+                split_value = sentence["value"].split('<image>\n')
+                _input_id += tokenizer(role).input_ids + nl_tokens
+                for idx, cur_value in enumerate(split_value):
+                    if idx == len(split_value) - 1:
+                        if cur_value == '':
+                            _input_id = _input_id + [im_end] + nl_tokens
+                        else:
                             _input_id = _input_id + tokenizer(cur_value).input_ids + [im_end] + nl_tokens
+                    else:
+                        if cur_value == '':
+                            _input_id = _input_id+ [IMAGE_TOKEN_INDEX] + nl_tokens
                         else:
                             _input_id = _input_id + tokenizer(cur_value).input_ids + [IMAGE_TOKEN_INDEX] + nl_tokens
             else:
@@ -725,7 +728,7 @@ class LazySupervisedDataset(Dataset):
         return len(self.list_data_dict)
 
     def process_audio(self, audio_file):
-        speech_wav = read_audio_patch(audio_file['audio'])
+        speech_wav = read_audio_patch(audio_file)
         speech_wav = speech_wav.astype(np.float32)
         CHUNK_LIM = 480000
         speechs = []
@@ -850,11 +853,11 @@ class LazySupervisedDataset(Dataset):
         has_image = ('image' in self.list_data_dict[i]) or ('video' in self.list_data_dict[i]) or ('video_long' in self.list_data_dict[i])
         
 
-        if 'video' in sources[0]:
+        if 'video' in sources[0] and 'audio' in sources[0]:  # video + audio
             assert 'audio' in sources[0]
             video_file = self.list_data_dict[i]['video']
 
-            audio_file = self.list_data_dict[i]
+            audio_file = self.list_data_dict[i]['audio']
             audio, audio_length, audio_chunks, speech_wav = self.process_audio(audio_file)
             # audio = [audio]
             
@@ -864,15 +867,15 @@ class LazySupervisedDataset(Dataset):
                 copy.deepcopy([e["conversations"] for e in sources]),
                 self.data_args)
 
-        elif 'audio' in sources[0]:
-            audio_file = self.list_data_dict[i]
+        elif 'audio' in sources[0]:  # audio only
+            audio_file = self.list_data_dict[i]['audio']
             audio, audio_length, audio_chunks, speech_wav = self.process_audio(audio_file)
             sources = preprocess_multimodal(
                 copy.deepcopy([e["conversations"] for e in sources]),
                 self.data_args
                 )
         elif 'audio_q' in sources[0] and 'image' in sources[0]: # audio + image
-            audio_file = self.list_data_dict[i]
+            audio_file = self.list_data_dict[i]['audio_q']
             audio, audio_length, audio_chunks, speech_wav = self.process_audio(audio_file)
             image_file = self.list_data_dict[i]['image']
             if type(image_file) is list:
@@ -886,10 +889,18 @@ class LazySupervisedDataset(Dataset):
                 self.data_args
                 )
         elif 'audio_q' in sources[0]: # audio + text
-            audio_file = self.list_data_dict[i]
+            audio_file = self.list_data_dict[i]['audio_q']
             audio, audio_length, audio_chunks, speech_wav = self.process_audio(audio_file)
             sources[0]['conversations'][0]['value'] = sources[0]['text_q']
             sources = preprocess_multimodal_special(
+                copy.deepcopy([e["conversations"] for e in sources]),
+                self.data_args
+                )
+        elif 'video' in sources[0]: # pure video
+            video_file = self.list_data_dict[i]['video']
+            video, _ = self.process_video(video_file)
+            video = [video]
+            sources = preprocess_multimodal(
                 copy.deepcopy([e["conversations"] for e in sources]),
                 self.data_args
                 )
@@ -1167,38 +1178,36 @@ def train():
         for p in vision_tower.parameters():
             p.requires_grad = False
 
-    speech_encoder = model.get_speech_encoder()
-    speech_encoder.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
-
     data_args.is_multimodal = True
 
-    model.config.tune_speech_adapter = training_args.tune_speech_adapter = model_args.tune_speech_adapter
-    if model_args.tune_speech_adapter:
-        model.requires_grad_(False)
-        for p in model.get_model().speech_projector.parameters():
-            p.requires_grad = True
-
     model.config.freeze_speech_adapter = training_args.freeze_speech_adapter
-    if training_args.freeze_speech_adapter:
-        for p in model.get_model().speech_projector.parameters():
-            p.requires_grad = False
-
-        model.config.speech_projector_lr = training_args.speech_projector_lr
-        model.config.mm_speech_encoder_lr = training_args.mm_speech_encoder_lr
-        model.config.mm_projector_lr = training_args.mm_projector_lr
-        model.config.mm_vision_tower_lr = training_args.mm_vision_tower_lr
-        model.config.mm_use_im_patch_token = model_args.mm_use_im_patch_token
-        model.initialize_vision_tokenizer(model_args, tokenizer=tokenizer)
-
-        if hasattr(speech_encoder, "fix_models"):
-            speech_encoder.fix_models()
+    model.config.mm_projector_lr = training_args.mm_projector_lr
+    model.config.mm_vision_tower_lr = training_args.mm_vision_tower_lr
+    model.config.mm_use_im_patch_token = model_args.mm_use_im_patch_token
+    model.config.speech_projector_lr = training_args.speech_projector_lr
+    model.config.mm_speech_encoder_lr = training_args.mm_speech_encoder_lr
+    model.config.tune_speech_adapter = training_args.tune_speech_adapter = model_args.tune_speech_adapter
     
-    if model_args.fix_speech_encoder:
-        speech_encoder.requires_grad_(False)
+    speech_encoder = model.get_speech_encoder()
+    if speech_encoder is not None:
 
-    if model_args.tune_speech_generator_only:
-        model.requires_grad_(False)
-        model.speech_generator.requires_grad_(True)
+        speech_encoder.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
+        if model_args.tune_speech_adapter:
+            model.requires_grad_(False)
+            for p in model.get_model().speech_projector.parameters():
+                p.requires_grad = True
+
+        if training_args.freeze_speech_adapter:
+            for p in model.get_model().speech_projector.parameters():
+                p.requires_grad = False
+
+            model.initialize_vision_tokenizer(model_args, tokenizer=tokenizer)
+
+            if hasattr(speech_encoder, "fix_models"):
+                speech_encoder.fix_models()
+    
+        if model_args.fix_speech_encoder:
+            speech_encoder.requires_grad_(False)
 
     if model_args.resume_from is not None:
         resume_path = model_args.resume_from

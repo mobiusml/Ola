@@ -13,10 +13,10 @@ export LOAD_VISION_EARLY=1
 
 export PYTHONPATH=/path/to/Ola:$PYTHONPATH
 
-EXP_NAME="ola_7b"
+EXP_NAME="ola_7b_stage2"
 DATA='/path/to/data.json'
 
-CHECKPOINT='/path/to/Ola_7b'
+CHECKPOINT='/path/to/Ola_Image'
 
 echo $MASTER_ADDR; echo $nnode; echo $nrank
 
@@ -28,6 +28,7 @@ torchrun  --nproc_per_node 8 --nnodes=$nnode --node_rank=$nrank --master_addr=$M
     --pretrain_speech_projector $CHECKPOINT/speech_projector.bin \
     --vision_tower $VISION_TOWER \
     --mm_projector_type ola_mlp \
+    --speech_projector_type "linear" \
     --mm_vision_select_layer -1 \
     --mm_use_im_patch_token False \
     --tune_speech_adapter False \
@@ -61,6 +62,6 @@ torchrun  --nproc_per_node 8 --nnodes=$nnode --node_rank=$nrank --master_addr=$M
     --model_max_length 16384 \
     --gradient_checkpointing True \
     --dataloader_num_workers 8 \
-    --frames_upbound 48 \
+    --frames_upbound 64 \
     --lazy_preprocess True \
     --report_to none
