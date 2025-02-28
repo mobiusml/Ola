@@ -26,7 +26,7 @@
 
 **Project Page:** [![Ola](https://img.shields.io/badge/Ola-project_page-orange)](https://ola-omni.github.io) 
 
-**Weights in Huggingface:** [![hf_checkpoint](https://img.shields.io/badge/🤗-Ola_7b-green)](https://huggingface.co/THUdyh/Ola-7b)
+**Weights in Huggingface:** [![hf_checkpoint](https://img.shields.io/badge/🤗-Ola_7b-green)](https://huggingface.co/THUdyh/Ola-7b)  [![hf_checkpoint](https://img.shields.io/badge/🤗-Ola_Image-green)](https://huggingface.co/THUdyh/Ola-Image)   [![hf_checkpoint](https://img.shields.io/badge/🤗-Ola_Video-green)](https://huggingface.co/THUdyh/Ola-Video)
 
 **arXiv Paper:** [![arxiv](https://img.shields.io/badge/Arxiv-2502.04328-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2502.04328)
 
@@ -39,6 +39,8 @@
 Contact: Leave an issue or contact liuzuyan19@gmail.com . We are on call to respond.
 
 ## 📢 News
+
+- 🔥[28/2/2025] We release the intermediate model, Ola-Image and Ola-Video, try building your own omni-modal models!
 
 - 🚀[19/2/2025] We release the huggingface demo of Ola, try the advanced omni-modal model on your own!
 
@@ -113,6 +115,17 @@ pip install -e ".[train]"
 pip install flash-attn --no-build-isolation
 ```
 
+## Model Zoo
+
+We provide our checkpoints at [Huggingface](https://huggingface.co/collections/THUdyh/ola-67b8220eb93406ec87aeec37)
+
+| Model | Link | Size | Modal |
+|:---:|:---:|:---:|:---:|
+|Ola-7b | [Huggingface](https://huggingface.co/THUdyh/Ola-7b) | 7B | Text, Image, Video, Audio |
+|Ola-Image | [Huggingface](https://huggingface.co/THUdyh/Ola-Image) | 7B | Text, Image |
+|Ola-Video | [Huggingface](https://huggingface.co/THUdyh/Ola-Video) | 7B | Text, Image, Video |
+
+
 ## Quick Start
 
 1. Download `Ola-7b` from [Huggingface](https://huggingface.co/THUdyh/Ola-7b) or skip the step to using the online weights directly.
@@ -159,8 +172,22 @@ Please refer to [DATA.md](https://github.com/Ola-Omni/Ola/blob/main/DATA.md) for
 
 Please follow the script below to start training. Make sure you have created the correct datasets for fine-tuning. 
 
+1. Finetuning Ola-7b Model:
+
 ```
-bash ./scripts/train_ola.sh
+bash ./scripts/finetune_ola.sh
+```
+
+2. Finetuning Ola-Image Model (Ola Stage1 or Stage2)
+
+```
+bash ./scripts/finetune_ola_image.sh
+```
+
+3. Finetuning Ola-Video Model (Ola Stage3):
+
+```
+bash ./scripts/finetune_ola_video.sh
 ```
 
 ## Citation
