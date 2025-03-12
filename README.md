@@ -53,7 +53,7 @@
 
 ### Run
 ```sh
- python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype float16
+ python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype bfloat16
 ```
 ---
 
