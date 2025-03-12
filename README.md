@@ -1,3 +1,59 @@
+### Installation Steps
+
+1. Install required Python packages:
+   ```sh
+   pip install torch torchvision --upgrade
+   pip install transformers==4.49.0 datasets tqdm
+   ```
+
+2. Install `setuptools`:
+   ```sh
+   sudo apt-get install python3-setuptools
+   pip install --upgrade setuptools
+   ```
+
+3. Upgrade `pip`:
+   ```sh
+   pip install --upgrade pip
+   ```
+
+4. Install Ola from GitHub:
+   ```sh
+   pip install git+https://github.com/Ola-Omni/Ola.git
+   ```
+
+5. Install additional dependencies:
+   ```sh
+   pip install moviepy decord deepspeed
+   ```
+
+6. Install FlashAttention without dependencies:
+   ```sh
+   pip install --no-dependencies --upgrade https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+   ```
+
+### Clone Repositories
+
+7. Clone the Ola-7b repository:
+   ```sh
+   git clone https://huggingface.co/THUdyh/Ola-7b
+   ```
+
+8. Clone the Oryx-ViT repository:
+   ```sh
+   git clone https://huggingface.co/THUdyh/Oryx-ViT
+   ```
+
+### Configuration Update
+
+9. Replace paths in `config.json`:
+   - `/root/Ola-7b/large-v3.pt`
+   - `/root/Ola-7b/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt`
+   - `/root/Oryx-ViT/oryx_vit.pth`
+
+
+
+
 <p align="center" width="100%">
 <img src="https://ola-omni.github.io/static/images/ola-icon.png" alt="967023137dff29e65b21544e7620e0f7.webp" width=60%>
 </p>

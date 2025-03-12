@@ -43,7 +43,6 @@ def load_pretrained_model_quantized(model_path, model_base=None, is_lora=False, 
         from gemlite.helper import A8W8_fp8_dynamic as A8W8_dynamic #A8W8_int8_dynamic
     
     kwargs['torch_dtype'] = torch_dtype
-    #kwargs['device_map'] = 'cpu'
 
     if use_flash_attn:
         kwargs['attn_implementation'] = 'flash_attention_2'
@@ -119,13 +118,16 @@ def load_pretrained_model_quantized(model_path, model_base=None, is_lora=False, 
                 _quantize(layer, quant_config, skip)
 
     #LLM quantization
+    print("Quantizing the LLM...")
     _quantize(model.model.layers, quant_config = BaseQuantizeConfig(nbits=4, group_size=64, axis=1))
     model.lm_head = model.lm_head.to(device=device, dtype=torch_dtype)
 
     #Speech encoder
+    print("Loading the speech encoder...")    
     model.get_model().speech_encoder = build_speech_encoder(model.config)
     model.get_model().speech_encoder.to(device=device, dtype=torch_dtype)
     model.model.speech_projector.to(device=device, dtype=torch_dtype)
+    
 
     #Image tower
     image_processor = None
@@ -145,6 +147,7 @@ def load_pretrained_model_quantized(model_path, model_base=None, is_lora=False, 
         context_len = 16384
 
     model = model.to(device=device, dtype=compute_dtype).eval()
+    model.model.speech_encoder.beats_model = model.model.speech_encoder.beats_model.float()
 
     return tokenizer, model, image_processor, context_len
 
@@ -154,16 +157,16 @@ parser.add_argument('--text', type=str, default=None)
 parser.add_argument('--audio_path', type=str, default=None)
 parser.add_argument('--image_path', type=str, default=None)
 parser.add_argument('--video_path', type=str, default=None)
+parser.add_argument('--compute_dtype',  type=str, default=None)
 args = parser.parse_args()
 
-model_path = args.model_path
-# python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content"
-
+# python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype float16
 ###########################################################################
-device, compute_dtype = 'cuda:0', torch.bfloat16 #torch.bfloat16 #bfloat16: tinygemm | float16: gemlite
+device        = 'cuda:0'
+model_path    = args.model_path
+compute_dtype = getattr(torch, args.compute_dtype) if (args.compute_dtype is not None) else torch.bfloat16
 
 tokenizer, model, image_processor, _ = load_pretrained_model_quantized(model_path, quantize=True, torch_dtype=compute_dtype, device=device)
-
 ###########################################################################
 
 
@@ -439,3 +442,7 @@ if outputs.endswith(stop_str):
 outputs = outputs.strip()
 
 print(outputs)
+
+#####################################################################################
+import gemlite
+gemlite.cache_config('/root/gemlite_config_updated.json')
