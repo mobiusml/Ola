@@ -18,7 +18,7 @@ from decord import VideoReader, cpu
 from PIL import Image
 import numpy as np
 import transformers
-import moviepy.editor as mp
+import moviepy as mp
 from typing import Dict, Optional, Sequence, List
 import librosa
 import whisper
@@ -29,8 +29,127 @@ from ola.mm_utils import KeywordsStoppingCriteria, process_anyres_video, process
 from ola.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX, DEFAULT_SPEECH_TOKEN, SPEECH_TOKEN_INDEX
 import argparse
 
+def load_pretrained_model_quantized(model_path, model_base=None, is_lora=False, quantize=True, torch_dtype=torch.float16, device="cuda:0", use_flash_attn=False, **kwargs):
+
+    from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, HqqConfig
+    import torch
+    from ola.model import OlaQwenForCausalLM
+    from ola.model.speech_encoder.builder import build_speech_encoder
+    from hqq.core.quantize import BaseQuantizeConfig, HQQLinear
+    from hqq.backends.torchao import patch_hqq_to_aoint4
+
+    if(torch_dtype == torch.float16):
+        from gemlite.helper import A16Wn
+        from gemlite.helper import A8W8_fp8_dynamic as A8W8_dynamic #A8W8_int8_dynamic
+    
+    kwargs['torch_dtype'] = torch_dtype
+    #kwargs['device_map'] = 'cpu'
+
+    if use_flash_attn:
+        kwargs['attn_implementation'] = 'flash_attention_2'
+
+    model_cls = OlaQwenForCausalLM
+
+    # Load Ola model
+    if is_lora:
+        assert model_base is not None, "model_base is required for LoRA models."
+        from ola.model.language_model.ola_qwen import OlaConfigQwen
+        lora_cfg_pretrained = OlaConfigQwen.from_pretrained(model_path)
+        tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
+        print('Loading Ola from base model...')
+        model = model_cls.from_pretrained(model_base, low_cpu_mem_usage=False, config=lora_cfg_pretrained, **kwargs)
+        print('Loading additional Ola weights...')
+        if os.path.exists(os.path.join(model_path, 'non_lora_trainables.bin')):
+            non_lora_trainables = torch.load(os.path.join(model_path, 'non_lora_trainables.bin'), map_location='cpu')
+        non_lora_trainables = {(k[11:] if k.startswith('base_model.') else k): v for k, v in non_lora_trainables.items()}
+        if any(k.startswith('model.model.') for k in non_lora_trainables):
+            non_lora_trainables = {(k[6:] if k.startswith('model.') else k): v for k, v in non_lora_trainables.items()}
+        model.load_state_dict(non_lora_trainables, strict=False)
+
+        from peft import PeftModel
+        print('Loading LoRA weights...')
+        model = PeftModel.from_pretrained(model, model_path)
+        print('Merging LoRA weights...')
+        model = model.merge_and_unload()
+        print('Model is loaded...')
+    elif model_base is not None:
+        print('Loading Ola from base model...')
+        tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
+        cfg_pretrained = AutoConfig.from_pretrained(model_path)
+        model = model_cls.from_pretrained(model_base, config=cfg_pretrained, **kwargs)
+        
+        speech_projector_weights = torch.load(os.path.join(model_path, 'speech_projector.bin'), map_location=device)
+        speech_projector_weights = {k: v.to(torch_dtype) for k, v in speech_projector_weights.items()}
+        model.load_state_dict(speech_projector_weights, strict=False)
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
+        model = model_cls.from_pretrained(model_path, **kwargs)
+
+
+    #model.model.vision_tower -  OK
+    #model.model.vision_resampler -  OK
+    #model.model.speech_projector - OK
+    #model.model.speech_encoder - OK
+    #model.model.layers -> Quantize - OK
+    #model.lm_head - OK
+
+    #Quantizer
+    def _quantize_fct(linear_layer, quant_config, name, skip):
+        if(name in skip):
+            return linear_layer.to(device=device, dtype=torch_dtype)
+        else:
+            if(quant_config == 'A8W8_dynamic'):
+                if(torch_dtype == torch.float16):
+                    linear_layer = A8W8_dynamic(device=device).from_linear(linear_layer)
+                else:
+                    pass
+            else:
+                linear_layer = HQQLinear(linear_layer, quant_config=quant_config, compute_dtype=torch_dtype, device=device)
+                if(torch_dtype == torch.float16):
+                    linear_layer = A16Wn(device=device).from_hqqlinear(linear_layer) #Gemlite backend
+                else:
+                    linear_layer = patch_hqq_to_aoint4(linear_layer, None)
+            return linear_layer
+        
+    def _quantize(model, quant_config, skip=['']):
+        for name, layer in model.named_children():
+            if isinstance(layer, torch.nn.Linear):
+                setattr(model, name, _quantize_fct(layer, quant_config, name, skip))
+            else:
+                _quantize(layer, quant_config, skip)
+
+    #LLM quantization
+    _quantize(model.model.layers, quant_config = BaseQuantizeConfig(nbits=4, group_size=64, axis=1))
+    model.lm_head = model.lm_head.to(device=device, dtype=torch_dtype)
+
+    #Speech encoder
+    model.get_model().speech_encoder = build_speech_encoder(model.config)
+    model.get_model().speech_encoder.to(device=device, dtype=torch_dtype)
+    model.model.speech_projector.to(device=device, dtype=torch_dtype)
+
+    #Image tower
+    image_processor = None
+    model.resize_token_embeddings(len(tokenizer))
+    vision_tower = model.get_vision_tower()
+    print("Loading vision tower...")
+    if not vision_tower.is_loaded:
+        vision_tower.load_model(device_map=device)
+    model.model.vision_tower.to(device=device, dtype=torch_dtype)
+    model.model.vision_resampler.to(device=device, dtype=torch_dtype)
+    image_processor = vision_tower.image_processor
+    print("Loading vision tower succeeded.")
+    
+    if hasattr(model.config, "max_sequence_length"):
+        context_len = model.config.max_sequence_length
+    else:
+        context_len = 16384
+
+    model = model.to(device=device, dtype=compute_dtype).eval()
+
+    return tokenizer, model, image_processor, context_len
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_path', type=str, default='THUdyh/Ola-7b')
+parser.add_argument('--model_path', type=str, default="/root/Ola-7b")
 parser.add_argument('--text', type=str, default=None)
 parser.add_argument('--audio_path', type=str, default=None)
 parser.add_argument('--image_path', type=str, default=None)
@@ -38,9 +157,15 @@ parser.add_argument('--video_path', type=str, default=None)
 args = parser.parse_args()
 
 model_path = args.model_path
-tokenizer, model, image_processor, _ = load_pretrained_model(model_path, None)
-model = model.to('cuda').eval()
-model = model.bfloat16()
+# python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content"
+
+###########################################################################
+device, compute_dtype = 'cuda:0', torch.bfloat16 #torch.bfloat16 #bfloat16: tinygemm | float16: gemlite
+
+tokenizer, model, image_processor, _ = load_pretrained_model_quantized(model_path, quantize=True, torch_dtype=compute_dtype, device=device)
+
+###########################################################################
+
 
 USE_SPEECH=False
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -129,18 +254,18 @@ elif modality == "image":
     image = [Image.open(visual)]
     image_sizes = [image[0].size]
 else:
-    images = [torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device='cuda', non_blocking=True)]
-    images_highres = [torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device='cuda', non_blocking=True)]
+    images = [torch.zeros(1, 3, 224, 224).to(dtype=compute_dtype, device=device, non_blocking=True)]
+    images_highres = [torch.zeros(1, 3, 224, 224).to(dtype=compute_dtype, device=device, non_blocking=True)]
     image_sizes = [(224, 224)]
 
 
 if USE_SPEECH and audio_path:
     audio_path = audio_path
     speech, speech_length, speech_chunk, speech_wav = load_audio(audio_path)
-    speechs.append(speech.bfloat16().to('cuda'))
-    speech_lengths.append(speech_length.to('cuda'))
-    speech_chunks.append(speech_chunk.to('cuda'))
-    speech_wavs.append(speech_wav.to('cuda'))
+    speechs.append(speech.to(dtype=compute_dtype, device=device))
+    speech_lengths.append(speech_length.to(device=device))
+    speech_chunks.append(speech_chunk.to(device=device))
+    speech_wavs.append(speech_wav.to(device=device))
     print('load audio')
 elif USE_SPEECH and not audio_path:
     # parse audio in the video
@@ -148,15 +273,15 @@ elif USE_SPEECH and not audio_path:
     audio.write_audiofile("./video_audio.wav")
     video_audio_path = './video_audio.wav'
     speech, speech_length, speech_chunk, speech_wav = load_audio(video_audio_path)
-    speechs.append(speech.bfloat16().to('cuda'))
-    speech_lengths.append(speech_length.to('cuda'))
-    speech_chunks.append(speech_chunk.to('cuda'))
-    speech_wavs.append(speech_wav.to('cuda'))
+    speechs.append(speech.to(dtype=compute_dtype, device=device))
+    speech_lengths.append(speech_length.to(device=device))
+    speech_chunks.append(speech_chunk.to(device=device))
+    speech_wavs.append(speech_wav.to(device=device))
 else:
-    speechs = [torch.zeros(1, 3000, 128).bfloat16().to('cuda')]
-    speech_lengths = [torch.LongTensor([3000]).to('cuda')]
-    speech_wavs = [torch.zeros([1, 480000]).to('cuda')]
-    speech_chunks = [torch.LongTensor([1]).to('cuda')]
+    speechs = [torch.zeros(1, 3000, 128).to(dtype=compute_dtype, device=device)]
+    speech_lengths = [torch.LongTensor([3000]).to(device=device)]
+    speech_wavs = [torch.zeros([1, 480000]).to(device=device)]
+    speech_chunks = [torch.LongTensor([1]).to(device=device)]
 
 conv_mode = "qwen_1_5"
 if text:
@@ -180,13 +305,13 @@ conv.append_message(conv.roles[0], qs)
 conv.append_message(conv.roles[1], None)
 prompt = conv.get_prompt()
 if USE_SPEECH and audio_path and image_path: # image + speech instruction
-    input_ids = tokenizer_speech_question_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
+    input_ids = tokenizer_speech_question_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(device)
 elif USE_SPEECH and video_path: # video + audio
-    input_ids = tokenizer_speech_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
+    input_ids = tokenizer_speech_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(device)
 elif USE_SPEECH and audio_path: # audio + text
-    input_ids = tokenizer_speech_token(prompt, tokenizer, SPEECH_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
+    input_ids = tokenizer_speech_token(prompt, tokenizer, SPEECH_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(device)
 else:
-    input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
+    input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(device)
 
 if modality == "video":
     video_processed = []
@@ -203,7 +328,7 @@ if modality == "video":
     if frame_idx is None:
         frame_idx = np.arange(0, len(video_processed), dtype=int).tolist()
     
-    video_processed = torch.cat(video_processed, dim=0).bfloat16().to("cuda")
+    video_processed = torch.cat(video_processed, dim=0).to(device=device, dtype=compute_dtype)
     video_processed = (video_processed, video_processed)
 
     video_data = (video_processed, (384, 384), "video")
@@ -220,17 +345,17 @@ elif modality == "image":
     if all(x.shape == image_highres_tensor[0].shape for x in image_highres_tensor):
         image_highres_tensor = torch.stack(image_highres_tensor, dim=0)
     if type(image_tensor) is list:
-        image_tensor = [_image.bfloat16().to("cuda") for _image in image_tensor]
+        image_tensor = [_image.to(device=device, dtype=compute_dtype) for _image in image_tensor]
     else:
-        image_tensor = image_tensor.bfloat16().to("cuda")
+        image_tensor = image_tensor.to(device=device, dtype=compute_dtype)
     if type(image_highres_tensor) is list:
-        image_highres_tensor = [_image.bfloat16().to("cuda") for _image in image_highres_tensor]
+        image_highres_tensor = [_image.to(device=device, dtype=compute_dtype) for _image in image_highres_tensor]
     else:
-        image_highres_tensor = image_highres_tensor.bfloat16().to("cuda")
+        image_highres_tensor = image_highres_tensor.to(device=device, dtype=compute_dtype)
 
 pad_token_ids = 151643
 
-attention_masks = input_ids.ne(pad_token_ids).long().to('cuda')
+attention_masks = input_ids.ne(pad_token_ids).long().to(device)
 stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
 keywords = [stop_str]
 stopping_criteria = KeywordsStoppingCriteria(keywords, tokenizer, input_ids)
