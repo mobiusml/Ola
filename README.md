@@ -51,8 +51,11 @@
    - `/root/Ola-7b/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt`
    - `/root/Oryx-ViT/oryx_vit.pth`
 
-
-
+### Run
+```sh
+ python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype float16
+```
+---
 
 <p align="center" width="100%">
 <img src="https://ola-omni.github.io/static/images/ola-icon.png" alt="967023137dff29e65b21544e7620e0f7.webp" width=60%>
