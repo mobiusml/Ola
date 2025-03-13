@@ -21,7 +21,7 @@ dependencies = [
     "requests", "httpx", "uvicorn", "fastapi", "soundfile",
     "einops", "einops-exts", "timm",
     "openai-whisper", "setuptools", "omegaconf", "loguru", "av", "librosa",
-    "hqq", "gemlite",
+    "hqq", "gemlite", "moviepy", "decord", "deepspeed",
 ]
 
 [project.optional-dependencies]

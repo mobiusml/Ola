@@ -2,58 +2,38 @@
 
 1. Install required Python packages:
    ```sh
-   pip install torch torchvision --upgrade
-   pip install transformers==4.49.0 datasets tqdm
+   pip install torch torchvision --upgrade;
+   pip install transformers==4.49.0;
+   pip install --no-dependencies --upgrade https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl;
+   pip install --upgrade pip;
+   sudo apt-get install python3-setuptools;
+   pip install --upgrade setuptools;
    ```
 
-2. Install `setuptools`:
-   ```sh
-   sudo apt-get install python3-setuptools
-   pip install --upgrade setuptools
-   ```
-
-3. Upgrade `pip`:
-   ```sh
-   pip install --upgrade pip
-   ```
-
-4. Install Ola from GitHub:
+2. Install Ola from GitHub:
    ```sh
    pip install git+https://github.com/Ola-Omni/Ola.git
    ```
 
-5. Install additional dependencies:
+### Models
+
+1. Clone the Ola-7b repository:
    ```sh
-   pip install moviepy decord deepspeed
+   git clone https://huggingface.co/THUdyh/Ola-7b;
+   git clone https://huggingface.co/THUdyh/Oryx-ViT;
    ```
 
-6. Install FlashAttention without dependencies:
-   ```sh
-   pip install --no-dependencies --upgrade https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
-   ```
-
-### Clone Repositories
-
-7. Clone the Ola-7b repository:
-   ```sh
-   git clone https://huggingface.co/THUdyh/Ola-7b
-   ```
-
-8. Clone the Oryx-ViT repository:
-   ```sh
-   git clone https://huggingface.co/THUdyh/Oryx-ViT
-   ```
-
-### Configuration Update
-
-9. Replace paths in `config.json`:
+2. Replace paths in `config.json`:
    - `/root/Ola-7b/large-v3.pt`
    - `/root/Ola-7b/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt`
    - `/root/Oryx-ViT/oryx_vit.pth`
 
 ### Run
 ```sh
- python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype bfloat16
+#Tinygemm backend
+python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype bfloat16
+#Gemlite backend - Dynamic quantization requires an ADA or Hopper GPU
+python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype float16
 ```
 ---
 

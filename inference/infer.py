@@ -29,10 +29,23 @@ from ola.mm_utils import KeywordsStoppingCriteria, process_anyres_video, process
 from ola.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX, DEFAULT_SPEECH_TOKEN, SPEECH_TOKEN_INDEX
 import argparse
 
-def load_pretrained_model_quantized(model_path, model_base=None, is_lora=False, quantize=True, torch_dtype=torch.float16, device="cuda:0", use_flash_attn=False, **kwargs):
+def load_pretrained_model_quantized(
+    model_path,
+    model_base=None,
+    is_lora=False,
+    quantize_llm=True,
+    quantize_audio=False,
+    quantize_vision=False,
+    quantize_dynamic=False,
+    torch_dtype=torch.float16,
+    device='cuda:0',
+    use_flash_attn=False,
+    **kwargs
+    ):
+
 
     from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, HqqConfig
-    import torch
+    import torch, os, gc
     from ola.model import OlaQwenForCausalLM
     from ola.model.speech_encoder.builder import build_speech_encoder
     from hqq.core.quantize import BaseQuantizeConfig, HQQLinear
@@ -84,28 +97,25 @@ def load_pretrained_model_quantized(model_path, model_base=None, is_lora=False, 
         tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
         model = model_cls.from_pretrained(model_path, **kwargs)
 
-
-    #model.model.vision_tower -  OK
-    #model.model.vision_resampler -  OK
-    #model.model.speech_projector - OK
-    #model.model.speech_encoder - OK
-    #model.model.layers -> Quantize - OK
-    #model.lm_head - OK
-
     #Quantizer
+    def check_valid_for_gemlite(linear_layer):
+        return linear_layer.in_features % 128 == 0 and linear_layer.out_features % 128 ==0
+
     def _quantize_fct(linear_layer, quant_config, name, skip):
-        if(name in skip):
+        if((name in skip) or (quant_config == None)):
             return linear_layer.to(device=device, dtype=torch_dtype)
         else:
-            if(quant_config == 'A8W8_dynamic'):
-                if(torch_dtype == torch.float16):
-                    linear_layer = A8W8_dynamic(device=device).from_linear(linear_layer)
+            #Dyanmic quant
+            if(quant_config == 'A8W8_dynamic'): 
+                if(check_valid_for_gemlite(linear_layer)):
+                    return A8W8_dynamic(device=device).from_linear(linear_layer)
                 else:
-                    pass
-            else:
+                    return linear_layer.to(device=device, dtype=torch_dtype)
+            #HQQ quant
+            else: 
                 linear_layer = HQQLinear(linear_layer, quant_config=quant_config, compute_dtype=torch_dtype, device=device)
-                if(torch_dtype == torch.float16):
-                    linear_layer = A16Wn(device=device).from_hqqlinear(linear_layer) #Gemlite backend
+                if(torch_dtype == torch.float16 and check_valid_for_gemlite(linear_layer)):
+                    linear_layer = A16Wn(device=device).from_hqqlinear(linear_layer)
                 else:
                     linear_layer = patch_hqq_to_aoint4(linear_layer, None)
             return linear_layer
@@ -118,16 +128,24 @@ def load_pretrained_model_quantized(model_path, model_base=None, is_lora=False, 
                 _quantize(layer, quant_config, skip)
 
     #LLM quantization
-    print("Quantizing the LLM...")
-    _quantize(model.model.layers, quant_config = BaseQuantizeConfig(nbits=4, group_size=64, axis=1))
-    model.lm_head = model.lm_head.to(device=device, dtype=torch_dtype)
+    if(quantize_llm):
+        print("Quantizing the LLM...")
+        _quantize(model.model.layers, BaseQuantizeConfig(nbits=4, group_size=64, axis=1))
+        _quantize(model.lm_head, BaseQuantizeConfig(nbits=8, group_size=None, axis=1))
+    else:
+        model.model.layers = model.model.layers.to(device=device, dtype=torch_dtype)
+        model.lm_head = model.lm_head.to(device=device, dtype=torch_dtype)
 
     #Speech encoder
     print("Loading the speech encoder...")    
     model.get_model().speech_encoder = build_speech_encoder(model.config)
-    model.get_model().speech_encoder.to(device=device, dtype=torch_dtype)
-    model.model.speech_projector.to(device=device, dtype=torch_dtype)
-    
+    model.model.speech_projector = model.model.speech_projector.to(device=device, dtype=torch_dtype)
+    if(quantize_audio):
+        print('Quantizing the speech encoder...')
+        quant_config = "A8W8_dynamic" if quantize_dynamic else BaseQuantizeConfig(nbits=8, group_size=None, axis=1) 
+        _quantize(model.model.speech_encoder.whisper_model.blocks, quant_config)
+    else:
+        model.model.speech_encoder.whisper_model.blocks = model.model.speech_encoder.whisper_model.blocks.to(device=device, dtype=torch_dtype)
 
     #Image tower
     image_processor = None
@@ -136,9 +154,15 @@ def load_pretrained_model_quantized(model_path, model_base=None, is_lora=False, 
     print("Loading vision tower...")
     if not vision_tower.is_loaded:
         vision_tower.load_model(device_map=device)
-    model.model.vision_tower.to(device=device, dtype=torch_dtype)
     model.model.vision_resampler.to(device=device, dtype=torch_dtype)
     image_processor = vision_tower.image_processor
+
+    if(quantize_vision):
+        quant_config = "A8W8_dynamic" if quantize_dynamic else BaseQuantizeConfig(nbits=8, group_size=None, axis=1)
+        _quantize(model.model.vision_tower.vision_tower.blocks, quant_config)
+    else:
+        model.model.vision_tower.vision_tower.blocks = model.model.vision_tower.vision_tower.blocks.to(device=device, dtype=torch_dtype)
+
     print("Loading vision tower succeeded.")
     
     if hasattr(model.config, "max_sequence_length"):
@@ -148,6 +172,10 @@ def load_pretrained_model_quantized(model_path, model_base=None, is_lora=False, 
 
     model = model.to(device=device, dtype=compute_dtype).eval()
     model.model.speech_encoder.beats_model = model.model.speech_encoder.beats_model.float()
+
+    torch.cuda.empty_cache()
+    gc.collect()
+    os.system('nvidia-smi')
 
     return tokenizer, model, image_processor, context_len
 
@@ -166,7 +194,17 @@ device        = 'cuda:0'
 model_path    = args.model_path
 compute_dtype = getattr(torch, args.compute_dtype) if (args.compute_dtype is not None) else torch.bfloat16
 
-tokenizer, model, image_processor, _ = load_pretrained_model_quantized(model_path, quantize=True, torch_dtype=compute_dtype, device=device)
+(tokenizer, model, image_processor, _) = \
+    load_pretrained_model_quantized(
+    model_path,
+    quantize_llm=True,
+    quantize_audio=True,
+    quantize_vision=False,
+    quantize_dynamic=False, #Need Ada gpu atleast
+    torch_dtype=compute_dtype,
+    device=device,
+    ) #~8.2 GB
+
 ###########################################################################
 
 
