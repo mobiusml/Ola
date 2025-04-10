@@ -13,6 +13,7 @@
 
 2. Install Ola from GitHub:
    ```sh
+   cd /root/data;
    git clone https://github.com/mobiusml/Ola.git; cd Ola; pip install -e .;
    ```
 
@@ -20,6 +21,7 @@
 
 1. Clone the Ola-7b repository:
    ```sh
+   cd /root;
    git clone https://huggingface.co/THUdyh/Ola-7b;
    git clone https://huggingface.co/THUdyh/Oryx-ViT;
    ```
@@ -32,9 +34,9 @@
 ### Run
 ```sh
 #Tinygemm backend
-python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype bfloat16
+python3 inference/infer.py --video_path /root/data/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype bfloat16
 #Gemlite backend - Dynamic quantization requires an ADA or Hopper GPU
-python3 inference/infer.py --video_path /root/zmore/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype float16
+python3 inference/infer.py --video_path /root/data/Ola/test.mp4 --text "provide a detailed summary of the visual and audio content" --compute_dtype float16
 ```
 ---
 
