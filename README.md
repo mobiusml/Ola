@@ -12,7 +12,7 @@
 
 2. Install Ola from GitHub:
    ```sh
-   pip install git+https://github.com/Ola-Omni/Ola.git
+   pip install git+https://github.com/mobiusml/Ola.git
    ```
 
 ### Models
