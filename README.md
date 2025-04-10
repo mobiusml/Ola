@@ -8,6 +8,7 @@
    pip install --upgrade pip;
    sudo apt-get install python3-setuptools;
    pip install --upgrade setuptools;
+   sudo apt-get install git-lfs;
    ```
 
 2. Install Ola from GitHub:
